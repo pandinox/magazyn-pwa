@@ -41,7 +41,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const btnSaveSettings     = document.getElementById('btnSaveSettings');
   const ADMIN_PASS          = 'TwojeSilneHaslo';
 
-  btnSettings.onclick = () => showView('view-settings');
+  btnSettings.onclick        = () => showView('view-settings');
   btnBackFromSettings.onclick = () => showView('view-home');
 
   btnUnlock.onclick = () => {
@@ -49,11 +49,8 @@ document.addEventListener('DOMContentLoaded', () => {
       settingsPassword.value = '';
       settingsForm.classList.remove('hidden');
       btnUnlock.disabled = true;
-    } else {
-      alert('Błędne hasło');
-    }
+    } else alert('Błędne hasło');
   };
-
   btnSaveSettings.onclick = () => {
     localStorage.deviceId = inputDeviceId.value;
     localStorage.token1   = inputToken1.value;
@@ -103,7 +100,15 @@ document.addEventListener('DOMContentLoaded', () => {
   const btnSwitchUser     = document.getElementById('btnSwitchUser');
 
   btnCheckLocation.onclick  = () => showView('view-check');
-  btnChangeLocation.onclick = () => showView('view-change');
+  btnChangeLocation.onclick = () => {
+    showView('view-change');
+    // przywróć pełny flow skanowania
+    document.getElementById('inputChangeCode').parentElement.classList.remove('hidden');
+    document.getElementById('btnFetchForChange').classList.remove('hidden');
+    document.getElementById('changePrompt').classList.add('hidden');
+    document.getElementById('changeScanNew').classList.add('hidden');
+    document.getElementById('inputChangeCode').focus();
+  };
   btnSwitchUser.onclick     = () => showView('view-user');
 
   // === SPRAWDŹ LOKACJĘ ===
@@ -132,15 +137,20 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   };
 
-  // === PRZEŁÓŻ (zmiana lokalizacji natychmiast) ===
+  // === PRZEŁÓŻ (natychmiastowa zmiana) ===
   btnRelocate.onclick = () => {
-    showView('view-change');
-    // od razu pokaż pole zmiany
-    document.querySelector('#view-change > div:nth-child(2)').classList.add('hidden');
-    document.getElementById('changePrompt').classList.add('hidden');
-    document.getElementById('changeScanNew').classList.remove('hidden');
-    // ustaw aktualną lokalizację i focus
+    // pobierz aktualną lokalizację
     const loc = checkResult.textContent.replace('Lokalizacja: ', '');
+    // przejdź do widoku zmiany
+    showView('view-change');
+    // ukryj skan kodu i przycisk
+    document.getElementById('inputChangeCode').parentElement.classList.add('hidden');
+    document.getElementById('btnFetchForChange').classList.add('hidden');
+    // ukryj prompt
+    document.getElementById('changePrompt').classList.add('hidden');
+    // pokaż wpis nowej lokalizacji
+    document.getElementById('changeScanNew').classList.remove('hidden');
+    // ustaw wartość i focus
     document.getElementById('currentLoc').textContent = `Aktualna lokalizacja: ${loc}`;
     const newInput = document.getElementById('inputNewLocation');
     newInput.value = '';
@@ -149,8 +159,24 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // === ZMIEŃ LOKACJĘ (pełny flow) ===
   document.querySelector('#view-change .btnBack').onclick = () => showView('view-dashboard');
-  const btnConfirmChange  = document.getElementById('btnConfirmChange');
-  const btnSubmitChange   = document.getElementById('btnSubmitChange');
+  const btnFetchForChange  = document.getElementById('btnFetchForChange');
+  const btnConfirmChange   = document.getElementById('btnConfirmChange');
+  const btnSubmitChange    = document.getElementById('btnSubmitChange');
+  const inputChangeCode2   = document.getElementById('inputChangeCode');
+
+  btnFetchForChange.onclick = async () => {
+    const res = await jsonpCall({
+      action:   'checkLocation',
+      deviceId: localStorage.deviceId,
+      token1:   localStorage.token1,
+      token2:   localStorage.token2,
+      code:     inputChangeCode2.value
+    });
+    if (!res.success) return alert(res.error);
+    if (!res.found) return alert('Kod nie istnieje');
+    document.getElementById('currentLoc').textContent = `Aktualna lokalizacja: ${res.location}`;
+    document.getElementById('changePrompt').classList.remove('hidden');
+  };
 
   btnConfirmChange.onclick = () => {
     document.getElementById('changePrompt').classList.add('hidden');
@@ -164,7 +190,7 @@ document.addEventListener('DOMContentLoaded', () => {
       deviceId:    localStorage.deviceId,
       token1:      localStorage.token1,
       token2:      localStorage.token2,
-      code:        inputCheckCode.value,
+      code:        inputChangeCode.value,
       newLocation: document.getElementById('inputNewLocation').value
     });
     if (!res.success) return alert(res.error);
@@ -172,6 +198,6 @@ document.addEventListener('DOMContentLoaded', () => {
     showView('view-dashboard');
   };
 
-  // Start od ekranu głównego
+  // Start od widoku głównego
   showView('view-home');
 });
