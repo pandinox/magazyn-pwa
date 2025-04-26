@@ -3,8 +3,7 @@
 // URL Twojego JSONP-enabled Web App
 const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbx1QSi1E7UIpy7jy-niSHwaukjJ4OdXdU-5k6ybGnKgHJJgLuldNPOKKNcmvIfh9RMKuA/exec';
 
-// JSONP helper
-function jsonpCall(params) {
+// JSONP helper\ nfunction jsonpCall(params) {
   return new Promise(resolve => {
     const cbName = 'cb_' + Math.random().toString(36).substr(2);
     window[cbName] = data => {
@@ -29,6 +28,9 @@ function showView(id) {
 
 // Główna logika po wczytaniu DOM
 document.addEventListener('DOMContentLoaded', () => {
+  let currentCode = '';
+  let currentSymbol = '';
+
   // === USTAWIENIA ===
   const btnSettings         = document.getElementById('btnSettings');
   const btnBackFromSettings = document.getElementById('btnBackFromSettings');
@@ -51,6 +53,7 @@ document.addEventListener('DOMContentLoaded', () => {
       btnUnlock.disabled = true;
     } else alert('Błędne hasło');
   };
+
   btnSaveSettings.onclick = () => {
     localStorage.deviceId = inputDeviceId.value;
     localStorage.token1   = inputToken1.value;
@@ -92,6 +95,7 @@ document.addEventListener('DOMContentLoaded', () => {
       listUsers.appendChild(li);
     });
   };
+
   btnBackFromUser.onclick = () => showView('view-home');
 
   // === DASHBOARD ===
@@ -100,15 +104,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const btnSwitchUser     = document.getElementById('btnSwitchUser');
 
   btnCheckLocation.onclick  = () => showView('view-check');
-  btnChangeLocation.onclick = () => {
-    showView('view-change');
-    // przywróć pełny flow skanowania
-    document.getElementById('inputChangeCode').parentElement.classList.remove('hidden');
-    document.getElementById('btnFetchForChange').classList.remove('hidden');
-    document.getElementById('changePrompt').classList.add('hidden');
-    document.getElementById('changeScanNew').classList.add('hidden');
-    document.getElementById('inputChangeCode').focus();
-  };
+  btnChangeLocation.onclick = () => showView('view-change');
   btnSwitchUser.onclick     = () => showView('view-user');
 
   // === SPRAWDŹ LOKACJĘ ===
@@ -129,7 +125,9 @@ document.addEventListener('DOMContentLoaded', () => {
     });
     if (!res.success) return alert(res.error);
     if (res.found) {
-      checkResult.textContent = `Lokalizacja: ${res.location}`;
+      currentCode = inputCheckCode.value;
+      currentSymbol = res.symbol || '';
+      checkResult.textContent = `Kod: ${currentCode}  Symbol: ${currentSymbol}  Lokalizacja: ${res.location}`;
       btnRelocate.classList.remove('hidden');
     } else {
       checkResult.textContent = 'Brak produktu w bazie';
@@ -139,19 +137,21 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // === PRZEŁÓŻ (natychmiastowa zmiana) ===
   btnRelocate.onclick = () => {
-    // pobierz aktualną lokalizację
-    const loc = checkResult.textContent.replace('Lokalizacja: ', '');
     // przejdź do widoku zmiany
     showView('view-change');
     // ukryj skan kodu i przycisk
     document.getElementById('inputChangeCode').parentElement.classList.add('hidden');
     document.getElementById('btnFetchForChange').classList.add('hidden');
-    // ukryj prompt
     document.getElementById('changePrompt').classList.add('hidden');
-    // pokaż wpis nowej lokalizacji
+    // pokaż wpis nowej lokalizacji i info o produkcie
     document.getElementById('changeScanNew').classList.remove('hidden');
-    // ustaw wartość i focus
-    document.getElementById('currentLoc').textContent = `Aktualna lokalizacja: ${loc}`;
+    document.getElementById('currentLoc').textContent = `Aktualna lokalizacja: ${checkResult.textContent.split('  Lokalizacja: ')[1]}`;
+    // nowy element info
+    const infoEl = document.getElementById('productInfo') || document.createElement('p');
+    infoEl.id = 'productInfo';
+    infoEl.textContent = `Kod produktu: ${currentCode} | Symbol: ${currentSymbol}`;
+    const container = document.getElementById('changeScanNew');
+    container.parentNode.insertBefore(infoEl, container);
     const newInput = document.getElementById('inputNewLocation');
     newInput.value = '';
     newInput.focus();
@@ -159,24 +159,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // === ZMIEŃ LOKACJĘ (pełny flow) ===
   document.querySelector('#view-change .btnBack').onclick = () => showView('view-dashboard');
-  const btnFetchForChange  = document.getElementById('btnFetchForChange');
-  const btnConfirmChange   = document.getElementById('btnConfirmChange');
-  const btnSubmitChange    = document.getElementById('btnSubmitChange');
-  const inputChangeCode2   = document.getElementById('inputChangeCode');
-
-  btnFetchForChange.onclick = async () => {
-    const res = await jsonpCall({
-      action:   'checkLocation',
-      deviceId: localStorage.deviceId,
-      token1:   localStorage.token1,
-      token2:   localStorage.token2,
-      code:     inputChangeCode2.value
-    });
-    if (!res.success) return alert(res.error);
-    if (!res.found) return alert('Kod nie istnieje');
-    document.getElementById('currentLoc').textContent = `Aktualna lokalizacja: ${res.location}`;
-    document.getElementById('changePrompt').classList.remove('hidden');
-  };
+  const btnConfirmChange  = document.getElementById('btnConfirmChange');
+  const btnSubmitChange   = document.getElementById('btnSubmitChange');
 
   btnConfirmChange.onclick = () => {
     document.getElementById('changePrompt').classList.add('hidden');
@@ -185,16 +169,22 @@ document.addEventListener('DOMContentLoaded', () => {
   };
 
   btnSubmitChange.onclick = async () => {
+    if (!currentCode || !document.getElementById('inputNewLocation').value) {
+      return alert('Brak kodu lub lokalizacji!');
+    }
     const res = await jsonpCall({
       action:      'setLocation',
       deviceId:    localStorage.deviceId,
       token1:      localStorage.token1,
       token2:      localStorage.token2,
-      code:        inputChangeCode.value,
+      code:        currentCode,
       newLocation: document.getElementById('inputNewLocation').value
     });
     if (!res.success) return alert(res.error);
     alert('Zaktualizowano lokalizację');
+    // usuń productInfo
+    const infoEl = document.getElementById('productInfo');
+    if (infoEl) infoEl.remove();
     showView('view-dashboard');
   };
 
