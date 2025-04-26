@@ -1,6 +1,6 @@
 // main.js
 
-const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwITvM8iUX0d88OjUZueounMnUdyWBzOfu8kKIroOQqbmnb9w3MUyXQ25gpADFLCN8o-w/exec'; // Twój Web App URL
+const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbx1QSi1E7UIpy7jy-niSHwaukjJ4OdXdU-5k6ybGnKgHJJgLuldNPOKKNcmvIfh9RMKuA/exec'; // Twój Web App URL
 
 // JSONP helper
 function jsonpCall(params) {
