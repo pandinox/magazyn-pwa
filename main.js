@@ -1,9 +1,10 @@
 /* main.js */
 
-// URL Twojego JSONP-enabled Web App
+// JSONP-enabled Apps Script Web App URL
 const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbx1QSi1E7UIpy7jy-niSHwaukjJ4OdXdU-5k6ybGnKgHJJgLuldNPOKKNcmvIfh9RMKuA/exec';
 
-// JSONP helper\ nfunction jsonpCall(params) {
+// JSONP helper
+default function jsonpCall(params) {
   return new Promise(resolve => {
     const cbName = 'cb_' + Math.random().toString(36).substr(2);
     window[cbName] = data => {
@@ -11,27 +12,35 @@ const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbx1QSi1E7UIpy7jy-niS
       script.remove();
       resolve(data);
     };
-    const u = new URL(SCRIPT_URL);
-    Object.entries(params).forEach(([k, v]) => u.searchParams.set(k, v));
-    u.searchParams.set('callback', cbName);
+    const url = new URL(SCRIPT_URL);
+    Object.entries(params).forEach(([key, value]) => url.searchParams.set(key, value));
+    url.searchParams.set('callback', cbName);
     const script = document.createElement('script');
-    script.src = u;
+    script.src = url;
     document.body.appendChild(script);
   });
 }
 
-// Przełączanie widoków
+// Switch views by id
 function showView(id) {
-  document.querySelectorAll('body > div').forEach(d => d.classList.add('hidden'));
+  document.querySelectorAll('body > div').forEach(el => el.classList.add('hidden'));
   document.getElementById(id).classList.remove('hidden');
 }
 
-// Główna logika po wczytaniu DOM
 document.addEventListener('DOMContentLoaded', () => {
+  // STATE
   let currentCode = '';
   let currentSymbol = '';
 
-  // === USTAWIENIA ===
+  // ELEMENTS
+  const views = {
+    home: document.getElementById('view-home'),
+    settings: document.getElementById('view-settings'),
+    user: document.getElementById('view-user'),
+    dashboard: document.getElementById('view-dashboard'),
+    check: document.getElementById('view-check'),
+    change: document.getElementById('view-change')
+  };
   const btnSettings         = document.getElementById('btnSettings');
   const btnBackFromSettings = document.getElementById('btnBackFromSettings');
   const settingsPassword    = document.getElementById('settingsPassword');
@@ -41,119 +50,143 @@ document.addEventListener('DOMContentLoaded', () => {
   const inputToken1         = document.getElementById('inputToken1');
   const inputToken2         = document.getElementById('inputToken2');
   const btnSaveSettings     = document.getElementById('btnSaveSettings');
-  const ADMIN_PASS          = 'TwojeSilneHaslo';
+  const btnSelectUser       = document.getElementById('btnSelectUser');
+  const btnBackFromUser     = document.getElementById('btnBackFromUser');
+  const listUsers           = document.getElementById('listUsers');
+  const btnCheckLocation    = document.getElementById('btnCheckLocation');
+  const btnChangeLocation   = document.getElementById('btnChangeLocation');
+  const btnSwitchUser       = document.getElementById('btnSwitchUser');
+  const labelUser           = document.getElementById('labelUser');
+  const btnCheckCode        = document.getElementById('btnCheckCode');
+  const inputCheckCode      = document.getElementById('inputCheckCode');
+  const checkResult         = document.getElementById('checkResult');
+  const btnRelocate         = document.getElementById('btnRelocate');
+  const btnFetchForChange   = document.getElementById('btnFetchForChange');
+  const btnConfirmChange    = document.getElementById('btnConfirmChange');
+  const btnSubmitChange     = document.getElementById('btnSubmitChange');
+  const inputChangeCode     = document.getElementById('inputChangeCode');
+  const changePrompt        = document.getElementById('changePrompt');
+  const changeScanNew       = document.getElementById('changeScanNew');
+  const inputNewLocation    = document.getElementById('inputNewLocation');
+  const currentLoc          = document.getElementById('currentLoc');
 
-  // Obsługa przycisków w Ustawieniach
-  btnSettings.onclick        = () => showView('view-settings');
-  btnBackFromSettings.onclick = () => showView('view-home');
-  btnUnlock.onclick = () => {
+  const ADMIN_PASS = 'TwojeSilneHaslo';
+
+  // SETTINGS
+  btnSettings.addEventListener('click', () => showView('view-settings'));
+  btnBackFromSettings.addEventListener('click', () => showView('view-home'));
+  btnUnlock.addEventListener('click', () => {
     if (settingsPassword.value === ADMIN_PASS) {
       settingsPassword.value = '';
       settingsForm.classList.remove('hidden');
       btnUnlock.disabled = true;
     } else alert('Błędne hasło');
-  };
-  btnSaveSettings.onclick = () => {
+  });
+  btnSaveSettings.addEventListener('click', () => {
     localStorage.deviceId = inputDeviceId.value;
-    localStorage.token1   = inputToken1.value;
-    localStorage.token2   = inputToken2.value;
+    localStorage.token1 = inputToken1.value;
+    localStorage.token2 = inputToken2.value;
     showView('view-home');
-  };
+  });
 
-  // === WYBÓR UŻYTKOWNIKA ===
-  const btnSelectUser   = document.getElementById('btnSelectUser');
-  const btnBackFromUser = document.getElementById('btnBackFromUser');
-  const listUsers       = document.getElementById('listUsers');
-
-  btnSelectUser.onclick = async () => {
+  // USER SELECTION
+  btnSelectUser.addEventListener('click', async () => {
     showView('view-user');
-    const res = await jsonpCall({ action:'getUsers', deviceId:localStorage.deviceId, token1:localStorage.token1, token2:localStorage.token2 });
+    const res = await jsonpCall({ action: 'getUsers', deviceId: localStorage.deviceId, token1: localStorage.token1, token2: localStorage.token2 });
     if (!res.success) return alert(res.error);
     listUsers.innerHTML = '';
     res.users.forEach(u => {
       const li = document.createElement('li');
       li.textContent = u;
-      li.onclick = async () => {
-        const setRes = await jsonpCall({ action:'setActiveUser', deviceId:localStorage.deviceId, token1:localStorage.token1, token2:localStorage.token2, user:u });
+      li.addEventListener('click', async () => {
+        const setRes = await jsonpCall({ action: 'setActiveUser', deviceId: localStorage.deviceId, token1: localStorage.token1, token2: localStorage.token2, user: u });
         if (!setRes.success) return alert(setRes.error);
         localStorage.currentUser = u;
-        document.getElementById('labelUser').textContent = u;
+        labelUser.textContent = u;
         showView('view-dashboard');
-      };
+      });
       listUsers.appendChild(li);
     });
-  };
-  btnBackFromUser.onclick = () => showView('view-home');
+  });
+  btnBackFromUser.addEventListener('click', () => showView('view-home'));
 
-  // === DASHBOARD ===
-  const btnCheckLocation  = document.getElementById('btnCheckLocation');
-  const btnChangeLocation = document.getElementById('btnChangeLocation');
-  const btnSwitchUser     = document.getElementById('btnSwitchUser');
+  // DASHBOARD
+  btnCheckLocation.addEventListener('click', () => showView('view-check'));
+  btnChangeLocation.addEventListener('click', () => {
+    showView('view-change');
+    // reset change view
+    inputChangeCode.parentElement.classList.remove('hidden');
+    btnFetchForChange.classList.remove('hidden');
+    changePrompt.classList.add('hidden');
+    changeScanNew.classList.add('hidden');
+    inputChangeCode.value = '';
+    inputChangeCode.focus();
+  });
+  btnSwitchUser.addEventListener('click', () => showView('view-user'));
 
-  btnCheckLocation.onclick  = () => showView('view-check');
-  btnChangeLocation.onclick = () => showView('view-change');
-  btnSwitchUser.onclick     = () => showView('view-user');
-
-  // === SPRAWDŹ LOKACJĘ ===
-  const btnCheckCode   = document.getElementById('btnCheckCode');
-  const inputCheckCode = document.getElementById('inputCheckCode');
-  const checkResult    = document.getElementById('checkResult');
-  const btnRelocate    = document.getElementById('btnRelocate');
-
-  document.querySelector('#view-check .btnBack').onclick = () => showView('view-dashboard');
-  btnCheckCode.onclick = async () => {
-    const res = await jsonpCall({ action:'checkLocation', deviceId:localStorage.deviceId, token1:localStorage.token1, token2:localStorage.token2, code:inputCheckCode.value });
+  // CHECK LOCATION FLOW
+  document.querySelector('#view-check .btnBack').addEventListener('click', () => showView('view-dashboard'));
+  btnCheckCode.addEventListener('click', async () => {
+    const res = await jsonpCall({ action: 'checkLocation', deviceId: localStorage.deviceId, token1: localStorage.token1, token2: localStorage.token2, code: inputCheckCode.value });
     if (!res.success) return alert(res.error);
     if (res.found) {
       currentCode = inputCheckCode.value;
       currentSymbol = res.symbol || '';
-      checkResult.textContent = `Kod: ${currentCode}  Symbol: ${currentSymbol}  Lokalizacja: ${res.location}`;
+      checkResult.textContent = `Kod: ${currentCode} | Symbol: ${currentSymbol} | Lokalizacja: ${res.location}`;
       btnRelocate.classList.remove('hidden');
     } else {
       checkResult.textContent = 'Brak produktu w bazie';
       btnRelocate.classList.add('hidden');
     }
-  };
+  });
 
-  // === PRZEŁÓŻ (natychmiastowa zmiana) ===
-  btnRelocate.onclick = () => {
+  // IMMEDIATE RELOCATE
+  btnRelocate.addEventListener('click', () => {
     showView('view-change');
-    document.getElementById('inputChangeCode').parentElement.classList.add('hidden');
-    document.getElementById('btnFetchForChange').classList.add('hidden');
-    document.getElementById('changePrompt').classList.add('hidden');
-    document.getElementById('changeScanNew').classList.remove('hidden');
-    document.getElementById('currentLoc').textContent = `Aktualna lokalizacja: ${checkResult.textContent.split('  Lokalizacja: ')[1]}`;
-    const infoEl = document.getElementById('productInfo') || document.createElement('p');
-    infoEl.id = 'productInfo';
+    inputChangeCode.parentElement.classList.add('hidden');
+    btnFetchForChange.classList.add('hidden');
+    changePrompt.classList.add('hidden');
+    changeScanNew.classList.remove('hidden');
+    currentLoc.textContent = `Aktualna lokalizacja: ${checkResult.textContent.split(' | Lokalizacja: ')[1]}`;
+    // display product info
+    let infoEl = document.getElementById('productInfo');
+    if (!infoEl) {
+      infoEl = document.createElement('p');
+      infoEl.id = 'productInfo';
+      document.getElementById('view-change').insertBefore(infoEl, changeScanNew);
+    }
     infoEl.textContent = `Kod produktu: ${currentCode} | Symbol: ${currentSymbol}`;
-    const container = document.getElementById('view-change');
-    container.insertBefore(infoEl, document.getElementById('changeScanNew'));
-    document.getElementById('inputNewLocation').focus();
-  };
+    inputNewLocation.value = '';
+    inputNewLocation.focus();
+  });
 
-  // === ZMIEŃ LOKACJĘ (pełny flow) ===
-  document.querySelector('#view-change .btnBack').onclick = () => showView('view-dashboard');
-  document.getElementById('btnFetchForChange').onclick = async () => {
-    const res = await jsonpCall({ action:'checkLocation', deviceId:localStorage.deviceId, token1:localStorage.token1, token2:localStorage.token2, code:document.getElementById('inputChangeCode').value });
+  // FULL CHANGE FLOW
+  document.querySelector('#view-change .btnBack').addEventListener('click', () => showView('view-dashboard'));
+  btnFetchForChange.addEventListener('click', async () => {
+    const res = await jsonpCall({ action: 'checkLocation', deviceId: localStorage.deviceId, token1: localStorage.token1, token2: localStorage.token2, code: inputChangeCode.value });
     if (!res.success) return alert(res.error);
     if (!res.found) return alert('Kod nie istnieje');
-    document.getElementById('currentLoc').textContent = `Aktualna lokalizacja: ${res.location}`;
-    document.getElementById('changePrompt').classList.remove('hidden');
-  };
-  document.getElementById('btnConfirmChange').onclick = () => {
-    document.getElementById('changePrompt').classList.add('hidden');
-    document.getElementById('changeScanNew').classList.remove('hidden');
-    document.getElementById('inputNewLocation').focus();
-  };
-  document.getElementById('btnSubmitChange').onclick = async () => {
-    if (!currentCode || !document.getElementById('inputNewLocation').value) return alert('Brak kodu lub lokalizacji!');
-    const res = await jsonpCall({ action:'setLocation', deviceId:localStorage.deviceId, token1:localStorage.token1, token2:localStorage.token2, code:currentCode, newLocation:document.getElementById('inputNewLocation').value });
+    currentCode = inputChangeCode.value;
+    currentSymbol = res.symbol || '';
+    currentLoc.textContent = `Aktualna lokalizacja: ${res.location}`;
+    changePrompt.classList.remove('hidden');
+  });
+  btnConfirmChange.addEventListener('click', () => {
+    changePrompt.classList.add('hidden');
+    changeScanNew.classList.remove('hidden');
+    inputNewLocation.focus();
+  });
+  btnSubmitChange.addEventListener('click', async () => {
+    const newLoc = inputNewLocation.value;
+    if (!currentCode || !newLoc) return alert('Brak kodu lub lokalizacji!');
+    const res = await jsonpCall({ action: 'setLocation', deviceId: localStorage.deviceId, token1: localStorage.token1, token2: localStorage.token2, code: currentCode, newLocation: newLoc });
     if (!res.success) return alert(res.error);
     alert('Zaktualizowano lokalizację');
-    const infoEl = document.getElementById('productInfo'); if (infoEl) infoEl.remove();
+    const infoEl = document.getElementById('productInfo');
+    if (infoEl) infoEl.remove();
     showView('view-dashboard');
-  };
+  });
 
-  // Start od widoku głównego
+  // Start
   showView('view-home');
 });
