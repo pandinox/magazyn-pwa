@@ -3,8 +3,7 @@
 // URL Twojego JSONP-enabled Web App
 const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzfIeWTvsnr9VlTMyNgfSlF4ptdodfS2R1i-j1crVL65phQtOFwUxHAZi29ndcLe6oMwA/exec';
 
-// JSONP helper
-function jsonpCall(params) {
+// JSONP helper\ nfunction jsonpCall(params) {
   return new Promise(resolve => {
     const cbName = 'cb_' + Math.random().toString(36).substr(2);
     window[cbName] = data => {
@@ -23,8 +22,7 @@ function jsonpCall(params) {
   });
 }
 
-// Pokaż/ukryj widoki
-function showView(id) {
+// Pokaż/ukryj widoki\ nfunction showView(id) {
   document.querySelectorAll('body > div').forEach(d => d.classList.add('hidden'));
   const v = document.getElementById(id);
   if (v) v.classList.remove('hidden');
@@ -37,7 +35,6 @@ document.addEventListener('DOMContentLoaded', () => {
   let lastHistory   = [];
 
   // --- ELEMENTY ---
-  // Ustawienia
   const btnSettings         = document.getElementById('btnSettings');
   const btnBackFromSettings = document.getElementById('btnBackFromSettings');
   const settingsPassword    = document.getElementById('settingsPassword');
@@ -49,33 +46,29 @@ document.addEventListener('DOMContentLoaded', () => {
   const btnSaveSettings     = document.getElementById('btnSaveSettings');
   const ADMIN_PASS          = 'TwojeSilneHaslo';
 
-  // Wybór użytkownika
-  const btnSelectUser  = document.getElementById('btnSelectUser');
-  const btnBackFromUser= document.getElementById('btnBackFromUser');
-  const listUsers      = document.getElementById('listUsers');
-  const labelUser      = document.getElementById('labelUser');
+  const btnSelectUser       = document.getElementById('btnSelectUser');
+  const btnBackFromUser     = document.getElementById('btnBackFromUser');
+  const listUsers           = document.getElementById('listUsers');
+  const labelUser           = document.getElementById('labelUser');
 
-  // Dashboard
-  const btnCheckLocation  = document.getElementById('btnCheckLocation');
-  const btnChangeLocation = document.getElementById('btnChangeLocation');
-  const btnSwitchUser     = document.getElementById('btnSwitchUser');
+  const btnCheckLocation    = document.getElementById('btnCheckLocation');
+  const btnChangeLocation   = document.getElementById('btnChangeLocation');
+  const btnSwitchUser       = document.getElementById('btnSwitchUser');
 
-  // Sprawdź lokalizację
-  const btnCheckCode  = document.getElementById('btnCheckCode');
-  const inputCheckCode= document.getElementById('inputCheckCode');
-  const checkResult   = document.getElementById('checkResult');
-  const btnRelocate   = document.getElementById('btnRelocate');
-  const btnHistory    = document.getElementById('btnHistory');  // <— musi być w HTML!
+  const btnCheckCode        = document.getElementById('btnCheckCode');
+  const inputCheckCode      = document.getElementById('inputCheckCode');
+  const checkResult         = document.getElementById('checkResult');
+  const btnRelocate         = document.getElementById('btnRelocate');
+  const btnHistory          = document.getElementById('btnHistory');
 
-  // Zmień lokalizację
-  const btnFetchForChange = document.getElementById('btnFetchForChange');
-  const inputChangeCode   = document.getElementById('inputChangeCode');
-  const changePrompt      = document.getElementById('changePrompt');
-  const btnConfirmChange  = document.getElementById('btnConfirmChange');
-  const changeScanNew     = document.getElementById('changeScanNew');
-  const inputNewLocation  = document.getElementById('inputNewLocation');
-  const btnSubmitChange   = document.getElementById('btnSubmitChange');
-  const currentLoc        = document.getElementById('currentLoc');
+  const btnFetchForChange   = document.getElementById('btnFetchForChange');
+  const inputChangeCode     = document.getElementById('inputChangeCode');
+  const changePrompt        = document.getElementById('changePrompt');
+  const btnConfirmChange    = document.getElementById('btnConfirmChange');
+  const changeScanNew       = document.getElementById('changeScanNew');
+  const inputNewLocation    = document.getElementById('inputNewLocation');
+  const btnSubmitChange     = document.getElementById('btnSubmitChange');
+  const currentLoc          = document.getElementById('currentLoc');
 
   // --- OBSŁUGA USTAWIEŃ ---
   if (btnSettings && btnBackFromSettings && btnUnlock && btnSaveSettings) {
@@ -100,25 +93,14 @@ document.addEventListener('DOMContentLoaded', () => {
   if (btnSelectUser && btnBackFromUser) {
     btnSelectUser.addEventListener('click', async () => {
       showView('view-user');
-      const res = await jsonpCall({
-        action:   'getUsers',
-        deviceId: localStorage.deviceId,
-        token1:   localStorage.token1,
-        token2:   localStorage.token2
-      });
+      const res = await jsonpCall({ action:'getUsers', deviceId:localStorage.deviceId, token1:localStorage.token1, token2:localStorage.token2 });
       if (!res.success) return alert(res.error);
       listUsers.innerHTML = '';
       res.users.forEach(u => {
         const li = document.createElement('li');
         li.textContent = u;
         li.addEventListener('click', async () => {
-          const setRes = await jsonpCall({
-            action:   'setActiveUser',
-            deviceId: localStorage.deviceId,
-            token1:   localStorage.token1,
-            token2:   localStorage.token2,
-            user:     u
-          });
+          const setRes = await jsonpCall({ action:'setActiveUser', deviceId:localStorage.deviceId, token1:localStorage.token1, token2:localStorage.token2, user:u });
           if (!setRes.success) return alert(setRes.error);
           localStorage.currentUser = u;
           labelUser.textContent    = u;
@@ -132,17 +114,37 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // --- DASHBOARD ---
   if (btnCheckLocation && btnChangeLocation && btnSwitchUser) {
-    btnCheckLocation.addEventListener('click', () => showView('view-check'));
+    btnCheckLocation.addEventListener('click', () => {
+      // reset po powrocie
+      currentCode = '';
+      currentSymbol = '';
+      lastHistory = [];
+      inputCheckCode.value = '';
+      checkResult.textContent = '';
+      if (btnRelocate) btnRelocate.classList.add('hidden');
+      if (btnHistory) btnHistory.classList.add('hidden');
+      showView('view-check');
+      inputCheckCode.focus();
+    });
+
     btnChangeLocation.addEventListener('click', () => {
-      showView('view-change');
+      // reset przy wchodzeniu z menu
+      currentCode = '';
+      currentSymbol = '';
+      lastHistory = [];
+      // usuń productInfo, gdy jest
+      const infoEl = document.getElementById('productInfo');
+      if (infoEl) infoEl.remove();
       // reset view-change
       inputChangeCode.parentElement.classList.remove('hidden');
       btnFetchForChange.classList.remove('hidden');
       changePrompt.classList.add('hidden');
       changeScanNew.classList.add('hidden');
       inputChangeCode.value = '';
+      showView('view-change');
       inputChangeCode.focus();
     });
+
     btnSwitchUser.addEventListener('click', () => showView('view-user'));
   }
 
@@ -152,20 +154,13 @@ document.addEventListener('DOMContentLoaded', () => {
 
   if (btnCheckCode && btnRelocate) {
     btnCheckCode.addEventListener('click', async () => {
-      const res = await jsonpCall({
-        action:   'checkLocation',
-        deviceId: localStorage.deviceId,
-        token1:   localStorage.token1,
-        token2:   localStorage.token2,
-        code:     inputCheckCode.value
-      });
+      const res = await jsonpCall({ action:'checkLocation', deviceId:localStorage.deviceId, token1:localStorage.token1, token2:localStorage.token2, code:inputCheckCode.value });
       if (!res.success) return alert(res.error);
       if (res.found) {
         currentCode   = res.code;
         currentSymbol = res.symbol;
         lastHistory   = res.history || [];
-        checkResult.textContent =
-          `Kod: ${res.code} | Symbol: ${res.symbol} | Lokalizacja: ${res.location}`;
+        checkResult.textContent = `Kod: ${res.code} | Symbol: ${res.symbol} | Lokalizacja: ${res.location}`;
         btnRelocate.classList.remove('hidden');
         if (btnHistory) btnHistory.classList.remove('hidden');
       } else {
@@ -182,9 +177,7 @@ document.addEventListener('DOMContentLoaded', () => {
           alert('Brak poprzednich zmian lokalizacji.');
           return;
         }
-        const lines = lastHistory.map(h =>
-          `${new Date(h.date).toLocaleString()}: ${h.oldLocation} → ${h.newLocation} (użytkownik: ${h.user})`
-        );
+        const lines = lastHistory.map(h => `${new Date(h.date).toLocaleString()}: ${h.oldLocation} → ${h.newLocation} (u: ${h.user})`);
         alert('Ostatnie zmiany:\n\n' + lines.join('\n'));
       });
     }
@@ -217,13 +210,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   if (btnFetchForChange) {
     btnFetchForChange.addEventListener('click', async () => {
-      const res = await jsonpCall({
-        action:   'checkLocation',
-        deviceId: localStorage.deviceId,
-        token1:   localStorage.token1,
-        token2:   localStorage.token2,
-        code:     inputChangeCode.value
-      });
+      const res = await jsonpCall({ action:'checkLocation', deviceId:localStorage.deviceId, token1:localStorage.token1, token2:localStorage.token2, code:inputChangeCode.value });
       if (!res.success) return alert(res.error);
       if (!res.found) return alert('Kod nie istnieje');
       currentCode   = res.code;
@@ -237,6 +224,7 @@ document.addEventListener('DOMContentLoaded', () => {
     btnConfirmChange.addEventListener('click', () => {
       changePrompt.classList.add('hidden');
       changeScanNew.classList.remove('hidden');
+      inputNewLocation.value = '';
       inputNewLocation.focus();
     });
   }
@@ -244,22 +232,14 @@ document.addEventListener('DOMContentLoaded', () => {
     btnSubmitChange.addEventListener('click', async () => {
       const newLoc = inputNewLocation.value;
       if (!currentCode || !newLoc) return alert('Brak kodu lub lokalizacji!');
-      const res = await jsonpCall({
-        action:      'setLocation',
-        deviceId:    localStorage.deviceId,
-        token1:      localStorage.token1,
-        token2:      localStorage.token2,
-        code:        currentCode,
-        newLocation: newLoc
-      });
+      const res = await jsonpCall({ action:'setLocation', deviceId:localStorage.deviceId, token1:localStorage.token1, token2:localStorage.token2, code: currentCode, newLocation: newLoc });
       if (!res.success) return alert(res.error);
       alert('Zaktualizowano lokalizację');
-      const infoEl = document.getElementById('productInfo');
-      if (infoEl) infoEl.remove();
+      const infoEl = document.getElementById('productInfo'); if (infoEl) infoEl.remove();
       showView('view-dashboard');
     });
   }
 
-  // Start
+  // Startujemy od ekranu głównego
   showView('view-home');
 });
