@@ -43,9 +43,9 @@ document.addEventListener('DOMContentLoaded', () => {
   const btnSaveSettings     = document.getElementById('btnSaveSettings');
   const ADMIN_PASS          = 'TwojeSilneHaslo';
 
+  // Obsługa przycisków w Ustawieniach
   btnSettings.onclick        = () => showView('view-settings');
   btnBackFromSettings.onclick = () => showView('view-home');
-
   btnUnlock.onclick = () => {
     if (settingsPassword.value === ADMIN_PASS) {
       settingsPassword.value = '';
@@ -53,7 +53,6 @@ document.addEventListener('DOMContentLoaded', () => {
       btnUnlock.disabled = true;
     } else alert('Błędne hasło');
   };
-
   btnSaveSettings.onclick = () => {
     localStorage.deviceId = inputDeviceId.value;
     localStorage.token1   = inputToken1.value;
@@ -68,25 +67,14 @@ document.addEventListener('DOMContentLoaded', () => {
 
   btnSelectUser.onclick = async () => {
     showView('view-user');
-    const res = await jsonpCall({
-      action:   'getUsers',
-      deviceId: localStorage.deviceId,
-      token1:   localStorage.token1,
-      token2:   localStorage.token2
-    });
+    const res = await jsonpCall({ action:'getUsers', deviceId:localStorage.deviceId, token1:localStorage.token1, token2:localStorage.token2 });
     if (!res.success) return alert(res.error);
     listUsers.innerHTML = '';
     res.users.forEach(u => {
       const li = document.createElement('li');
       li.textContent = u;
       li.onclick = async () => {
-        const setRes = await jsonpCall({
-          action:   'setActiveUser',
-          deviceId: localStorage.deviceId,
-          token1:   localStorage.token1,
-          token2:   localStorage.token2,
-          user:     u
-        });
+        const setRes = await jsonpCall({ action:'setActiveUser', deviceId:localStorage.deviceId, token1:localStorage.token1, token2:localStorage.token2, user:u });
         if (!setRes.success) return alert(setRes.error);
         localStorage.currentUser = u;
         document.getElementById('labelUser').textContent = u;
@@ -95,7 +83,6 @@ document.addEventListener('DOMContentLoaded', () => {
       listUsers.appendChild(li);
     });
   };
-
   btnBackFromUser.onclick = () => showView('view-home');
 
   // === DASHBOARD ===
@@ -114,15 +101,8 @@ document.addEventListener('DOMContentLoaded', () => {
   const btnRelocate    = document.getElementById('btnRelocate');
 
   document.querySelector('#view-check .btnBack').onclick = () => showView('view-dashboard');
-
   btnCheckCode.onclick = async () => {
-    const res = await jsonpCall({
-      action:   'checkLocation',
-      deviceId: localStorage.deviceId,
-      token1:   localStorage.token1,
-      token2:   localStorage.token2,
-      code:     inputCheckCode.value
-    });
+    const res = await jsonpCall({ action:'checkLocation', deviceId:localStorage.deviceId, token1:localStorage.token1, token2:localStorage.token2, code:inputCheckCode.value });
     if (!res.success) return alert(res.error);
     if (res.found) {
       currentCode = inputCheckCode.value;
@@ -137,54 +117,40 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // === PRZEŁÓŻ (natychmiastowa zmiana) ===
   btnRelocate.onclick = () => {
-    // przejdź do widoku zmiany
     showView('view-change');
-    // ukryj skan kodu i przycisk
     document.getElementById('inputChangeCode').parentElement.classList.add('hidden');
     document.getElementById('btnFetchForChange').classList.add('hidden');
     document.getElementById('changePrompt').classList.add('hidden');
-    // pokaż wpis nowej lokalizacji i info o produkcie
     document.getElementById('changeScanNew').classList.remove('hidden');
     document.getElementById('currentLoc').textContent = `Aktualna lokalizacja: ${checkResult.textContent.split('  Lokalizacja: ')[1]}`;
-    // nowy element info
     const infoEl = document.getElementById('productInfo') || document.createElement('p');
     infoEl.id = 'productInfo';
     infoEl.textContent = `Kod produktu: ${currentCode} | Symbol: ${currentSymbol}`;
-    const container = document.getElementById('changeScanNew');
-    container.parentNode.insertBefore(infoEl, container);
-    const newInput = document.getElementById('inputNewLocation');
-    newInput.value = '';
-    newInput.focus();
+    const container = document.getElementById('view-change');
+    container.insertBefore(infoEl, document.getElementById('changeScanNew'));
+    document.getElementById('inputNewLocation').focus();
   };
 
   // === ZMIEŃ LOKACJĘ (pełny flow) ===
   document.querySelector('#view-change .btnBack').onclick = () => showView('view-dashboard');
-  const btnConfirmChange  = document.getElementById('btnConfirmChange');
-  const btnSubmitChange   = document.getElementById('btnSubmitChange');
-
-  btnConfirmChange.onclick = () => {
+  document.getElementById('btnFetchForChange').onclick = async () => {
+    const res = await jsonpCall({ action:'checkLocation', deviceId:localStorage.deviceId, token1:localStorage.token1, token2:localStorage.token2, code:document.getElementById('inputChangeCode').value });
+    if (!res.success) return alert(res.error);
+    if (!res.found) return alert('Kod nie istnieje');
+    document.getElementById('currentLoc').textContent = `Aktualna lokalizacja: ${res.location}`;
+    document.getElementById('changePrompt').classList.remove('hidden');
+  };
+  document.getElementById('btnConfirmChange').onclick = () => {
     document.getElementById('changePrompt').classList.add('hidden');
     document.getElementById('changeScanNew').classList.remove('hidden');
     document.getElementById('inputNewLocation').focus();
   };
-
-  btnSubmitChange.onclick = async () => {
-    if (!currentCode || !document.getElementById('inputNewLocation').value) {
-      return alert('Brak kodu lub lokalizacji!');
-    }
-    const res = await jsonpCall({
-      action:      'setLocation',
-      deviceId:    localStorage.deviceId,
-      token1:      localStorage.token1,
-      token2:      localStorage.token2,
-      code:        currentCode,
-      newLocation: document.getElementById('inputNewLocation').value
-    });
+  document.getElementById('btnSubmitChange').onclick = async () => {
+    if (!currentCode || !document.getElementById('inputNewLocation').value) return alert('Brak kodu lub lokalizacji!');
+    const res = await jsonpCall({ action:'setLocation', deviceId:localStorage.deviceId, token1:localStorage.token1, token2:localStorage.token2, code:currentCode, newLocation:document.getElementById('inputNewLocation').value });
     if (!res.success) return alert(res.error);
     alert('Zaktualizowano lokalizację');
-    // usuń productInfo
-    const infoEl = document.getElementById('productInfo');
-    if (infoEl) infoEl.remove();
+    const infoEl = document.getElementById('productInfo'); if (infoEl) infoEl.remove();
     showView('view-dashboard');
   };
 
