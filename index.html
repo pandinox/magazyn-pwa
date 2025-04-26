@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Magazyn PWA</title>
+  <link rel="manifest" href="manifest.json">
+  <style>
+    body { font-family: sans-serif; margin: 1rem; }
+    .hidden { display: none; }
+    button, input { display:block; width:100%; padding:.5rem; margin:.5rem 0; }
+    ul { list-style:none; padding:0; }
+    li { padding:.5rem; border:1px solid #ccc; margin:.25rem 0; cursor:pointer; }
+    li:hover { background:#f0f0f0; }
+  </style>
+</head>
+<body>
+  <!-- 1) Ekran główny -->
+  <div id="view-home">
+    <button id="btnSelectUser">Wybierz użytkownika</button>
+    <button id="btnSettings">Ustawienia</button>
+  </div>
+
+  <!-- 2) Settings -->
+  <div id="view-settings" class="hidden">
+    <button id="btnBackFromSettings">← Wstecz</button>
+    <label>Hasło admina: <input id="settingsPassword" type="password"></label>
+    <button id="btnUnlock">Odblokuj</button>
+    <form id="settingsForm" class="hidden">
+      <label>Device ID: <input id="inputDeviceId"></label>
+      <label>Token 1: <input id="inputToken1"></label>
+      <label>Token 2: <input id="inputToken2"></label>
+      <button id="btnSaveSettings" type="button">Zapisz</button>
+    </form>
+  </div>
+
+  <!-- 3) Wybór użytkownika -->
+  <div id="view-user" class="hidden">
+    <button id="btnBackFromUser">← Wstecz</button>
+    <ul id="listUsers"></ul>
+  </div>
+
+  <!-- 4) Dashboard -->
+  <div id="view-dashboard" class="hidden">
+    <p>Zalogowany: <strong><span id="labelUser"></span></strong></p>
+    <button id="btnCheckLocation">Sprawdź lokalizację</button>
+    <button id="btnChangeLocation">Zmień lokalizację</button>
+    <button id="btnSwitchUser">Zmień użytkownika</button>
+  </div>
+
+  <!-- 5) Check location -->
+  <div id="view-check" class="hidden">
+    <button class="btnBack">← Wstecz</button>
+    <label>Kod towaru: <input id="inputCheckCode" autofocus></label>
+    <button id="btnCheckCode">Sprawdź</button>
+    <div id="checkResult"></div>
+    <button id="btnRelocate" class="hidden">Przełóż</button>
+  </div>
+
+  <!-- 6) Change location -->
+  <div id="view-change" class="hidden">
+    <button class="btnBack">← Wstecz</button>
+    <label>Kod towaru: <input id="inputChangeCode" autofocus></label>
+    <button id="btnFetchForChange">Dalej</button>
+
+    <div id="changePrompt" class="hidden">
+      <p id="currentLoc"></p>
+      <button id="btnConfirmChange">Zmień lokalizację</button>
+    </div>
+
+    <div id="changeScanNew" class="hidden">
+      <label>Nowa lokalizacja: <input id="inputNewLocation" autofocus></label>
+      <button id="btnSubmitChange">Zapisz</button>
+    </div>
+  </div>
+
+  <script src="main.js"></script>
+</body>
+</html>
