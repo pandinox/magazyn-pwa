@@ -1,6 +1,6 @@
 /* main.js */
 
-// URL Twojego JSONP-enabled Web App
+// URL do JSONP-enabled Web App (Apps Script)
 const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzfIeWTvsnr9VlTMyNgfSlF4ptdodfS2R1i-j1crVL65phQtOFwUxHAZi29ndcLe6oMwA/exec';
 
 // JSONP helper
@@ -23,21 +23,29 @@ function jsonpCall(params) {
   });
 }
 
-// Przełączanie widoków
+// Przełączanie widoków po ID
 function showView(id) {
   document.querySelectorAll('body > div').forEach(d => d.classList.add('hidden'));
   const view = document.getElementById(id);
   if (view) view.classList.remove('hidden');
 }
 
+// Po załadowaniu DOM
 document.addEventListener('DOMContentLoaded', () => {
-  // --- STAN ---
-  let currentCode = '';
-  let currentSymbol = '';
-  let lastHistory = [];
-  let lastLocation = '';
+  // --- STAN APLIKACJI ---
+  let currentCode    = '';
+  let currentSymbol  = '';
+  let lastHistory    = [];
+  let lastLocation   = '';
+  let currentMode    = 'home'; // 'check' lub 'change'
 
-  // --- ELEMENTY ---
+  // --- ELEMENTY DOM ---
+  const modeLabel            = document.getElementById('modeLabel');
+  function updateMode(name) {
+    if (modeLabel) modeLabel.textContent = 'Tryb: ' + name;
+  }
+
+  // Ustawienia
   const btnSettings         = document.getElementById('btnSettings');
   const btnBackFromSettings = document.getElementById('btnBackFromSettings');
   const settingsPassword    = document.getElementById('settingsPassword');
@@ -49,21 +57,25 @@ document.addEventListener('DOMContentLoaded', () => {
   const btnSaveSettings     = document.getElementById('btnSaveSettings');
   const ADMIN_PASS          = 'TwojeSilneHaslo';
 
+  // Wybór użytkownika
   const btnSelectUser  = document.getElementById('btnSelectUser');
   const btnBackFromUser= document.getElementById('btnBackFromUser');
   const listUsers      = document.getElementById('listUsers');
   const labelUser      = document.getElementById('labelUser');
 
+  // Dashboard
   const btnCheckLocation  = document.getElementById('btnCheckLocation');
   const btnChangeLocation = document.getElementById('btnChangeLocation');
   const btnSwitchUser     = document.getElementById('btnSwitchUser');
 
+  // Sprawdź lokalizację
   const btnCheckCode   = document.getElementById('btnCheckCode');
   const inputCheckCode = document.getElementById('inputCheckCode');
   const checkResult    = document.getElementById('checkResult');
   const btnRelocate    = document.getElementById('btnRelocate');
   const btnHistory     = document.getElementById('btnHistory');
 
+  // Zmień lokalizację
   const btnFetchForChange = document.getElementById('btnFetchForChange');
   const inputChangeCode   = document.getElementById('inputChangeCode');
   const currentLoc        = document.getElementById('currentLoc');
@@ -71,7 +83,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const inputNewLocation  = document.getElementById('inputNewLocation');
   const btnSubmitChange   = document.getElementById('btnSubmitChange');
 
-  // 1) Ustawienia
+  // --- USTAWIENIA ---
   if (btnSettings && btnBackFromSettings && btnUnlock && btnSaveSettings) {
     btnSettings.onclick = () => showView('view-settings');
     btnBackFromSettings.onclick = () => showView('view-home');
@@ -90,10 +102,11 @@ document.addEventListener('DOMContentLoaded', () => {
     };
   }
 
-  // 2) Wybór użytkownika
+  // --- WYBÓR UŻYTKOWNIKA ---
   if (btnSelectUser && btnBackFromUser) {
     btnSelectUser.onclick = async () => {
       showView('view-user');
+      updateMode('–');
       const res = await jsonpCall({ action:'getUsers', deviceId:localStorage.deviceId, token1:localStorage.token1, token2:localStorage.token2 });
       if (!res.success) return alert(res.error);
       listUsers.innerHTML = '';
@@ -106,6 +119,7 @@ document.addEventListener('DOMContentLoaded', () => {
           localStorage.currentUser = u;
           labelUser.textContent = u;
           showView('view-dashboard');
+          updateMode('–');
         };
         listUsers.appendChild(li);
       });
@@ -113,9 +127,11 @@ document.addEventListener('DOMContentLoaded', () => {
     btnBackFromUser.onclick = () => showView('view-home');
   }
 
-  // 3) Dashboard
+  // --- DASHBOARD ---
   if (btnCheckLocation) {
     btnCheckLocation.onclick = () => {
+      currentMode = 'check';
+      updateMode('Sprawdź lokalizację');
       currentCode = '';
       currentSymbol = '';
       lastHistory = [];
@@ -130,6 +146,8 @@ document.addEventListener('DOMContentLoaded', () => {
   }
   if (btnChangeLocation) {
     btnChangeLocation.onclick = () => {
+      currentMode = 'change';
+      updateMode('Zmień lokalizację');
       currentCode = '';
       currentSymbol = '';
       lastHistory = [];
@@ -145,10 +163,9 @@ document.addEventListener('DOMContentLoaded', () => {
   }
   if (btnSwitchUser) btnSwitchUser.onclick = () => showView('view-user');
 
-  // 4) Sprawdź lokalizację + historia + przełóż
+  // --- SPRAWDŹ LOKACJĘ + PRZEŁÓŻ ---
   const btnBackCheck = document.querySelector('#view-check .btnBack');
   if (btnBackCheck) btnBackCheck.onclick = () => showView('view-dashboard');
-
   if (btnCheckCode) {
     btnCheckCode.onclick = async () => {
       const res = await jsonpCall({ action:'checkLocation', deviceId:localStorage.deviceId, token1:localStorage.token1, token2:localStorage.token2, code:inputCheckCode.value });
@@ -165,15 +182,15 @@ document.addEventListener('DOMContentLoaded', () => {
         checkResult.textContent = 'Brak produktu w bazie';
       }
     };
-    inputCheckCode.onkeydown = e => { if (e.key === 'Enter') { e.preventDefault(); btnCheckCode.click(); }};
+    inputCheckCode.onkeydown = e => { if (e.key==='Enter') { e.preventDefault(); btnCheckCode.click(); }};
     if (btnHistory) btnHistory.onclick = () => {
       if (!lastHistory.length) return alert('Brak historii');
       const lines = lastHistory.map(h => `${new Date(h.date).toLocaleString()}: ${h.oldLocation} → ${h.newLocation}`);
       alert('Historia zmian:' + '\n' + lines.join('\n'));
     };
-
-    // nowa funkcja: przełóż direct
     if (btnRelocate) btnRelocate.onclick = () => {
+      currentMode = 'check';
+      updateMode('Zmień lokalizację');
       showView('view-change');
       inputChangeCode.parentElement.classList.add('hidden');
       btnFetchForChange.classList.add('hidden');
@@ -191,7 +208,7 @@ document.addEventListener('DOMContentLoaded', () => {
     };
   }
 
-  // 5) Zmień lokalizację z menu
+  // --- ZMIEŃ LOKALIZACJĘ (menu) ---
   if (btnFetchForChange) {
     btnFetchForChange.onclick = async () => {
       const res = await jsonpCall({ action:'checkLocation', deviceId:localStorage.deviceId, token1:localStorage.token1, token2:localStorage.token2, code:inputChangeCode.value });
@@ -208,10 +225,10 @@ document.addEventListener('DOMContentLoaded', () => {
       inputNewLocation.value = '';
       inputNewLocation.focus();
     };
-    inputChangeCode.onkeydown = e => { if (e.key === 'Enter') { e.preventDefault(); btnFetchForChange.click(); }};
+    inputChangeCode.onkeydown = e => { if (e.key==='Enter') { e.preventDefault(); btnFetchForChange.click(); }};
   }
 
-  // 6) Zapisz nową lokalizację
+  // --- ZAPISZ NOWĄ LOKALIZACJĘ ---
   if (btnSubmitChange) {
     btnSubmitChange.onclick = async () => {
       const newLoc = inputNewLocation.value;
@@ -220,15 +237,33 @@ document.addEventListener('DOMContentLoaded', () => {
       if (!res.success) return alert(res.error);
       alert('Zapisano lokalizację');
       const infoEl = document.getElementById('productInfo'); if (infoEl) infoEl.remove();
-      showView('view-dashboard');
+
+      // wróć do trybu, w którym byłeś
+      if (currentMode === 'check') {
+        updateMode('Sprawdź lokalizację');
+        showView('view-check');
+        inputCheckCode.value = '';
+        checkResult.textContent = '';
+        btnRelocate.classList.add('hidden');
+        if (btnHistory) btnHistory.classList.add('hidden');
+        inputCheckCode.focus();
+      } else {
+        updateMode('Zmień lokalizację');
+        showView('view-change');
+        inputChangeCode.parentElement.classList.remove('hidden');
+        btnFetchForChange.classList.remove('hidden');
+        changeScanNew.classList.add('hidden');
+        inputChangeCode.value = '';
+        inputChangeCode.focus();
+      }
     };
-    inputNewLocation.onkeydown = e => { if (e.key === 'Enter') { e.preventDefault(); btnSubmitChange.click(); }};
+    inputNewLocation.onkeydown = e => { if (e.key==='Enter') { e.preventDefault(); btnSubmitChange.click(); }};
   }
 
-  // powrót z view-change
+  // --- POWRÓT Z view-change ---
   const btnBackChange = document.querySelector('#view-change .btnBack');
   if (btnBackChange) btnBackChange.onclick = () => showView('view-dashboard');
 
-  // start
+  // --- START ---
   showView('view-home');
 });
