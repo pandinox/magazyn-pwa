@@ -1,6 +1,6 @@
 /* main.js */
 
-// URL do Twojego JSONP-enabled Web App
+// URL Twojego JSONP-enabled Web App
 const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzfIeWTvsnr9VlTMyNgfSlF4ptdodfS2R1i-j1crVL65phQtOFwUxHAZi29ndcLe6oMwA/exec';
 
 // JSONP helper
@@ -9,7 +9,8 @@ function jsonpCall(params) {
     const cbName = 'cb_' + Math.random().toString(36).substr(2);
     window[cbName] = data => {
       delete window[cbName];
-      document.body.removeChild(document.getElementById(cbName));
+      const s = document.getElementById(cbName);
+      if (s) document.body.removeChild(s);
       resolve(data);
     };
     const url = new URL(SCRIPT_URL);
@@ -22,18 +23,20 @@ function jsonpCall(params) {
   });
 }
 
-// Przełączanie widoków
+// Pokaż/ukryj widoki
 function showView(id) {
   document.querySelectorAll('body > div').forEach(d => d.classList.add('hidden'));
-  document.getElementById(id).classList.remove('hidden');
+  const v = document.getElementById(id);
+  if (v) v.classList.remove('hidden');
 }
 
 document.addEventListener('DOMContentLoaded', () => {
-  // --- STAN I ELEMENTY ---
+  // --- STAN ---
   let currentCode   = '';
   let currentSymbol = '';
   let lastHistory   = [];
 
+  // --- ELEMENTY ---
   // Ustawienia
   const btnSettings         = document.getElementById('btnSettings');
   const btnBackFromSettings = document.getElementById('btnBackFromSettings');
@@ -47,10 +50,10 @@ document.addEventListener('DOMContentLoaded', () => {
   const ADMIN_PASS          = 'TwojeSilneHaslo';
 
   // Wybór użytkownika
-  const btnSelectUser = document.getElementById('btnSelectUser');
-  const btnBackFromUser = document.getElementById('btnBackFromUser');
-  const listUsers       = document.getElementById('listUsers');
-  const labelUser       = document.getElementById('labelUser');
+  const btnSelectUser  = document.getElementById('btnSelectUser');
+  const btnBackFromUser= document.getElementById('btnBackFromUser');
+  const listUsers      = document.getElementById('listUsers');
+  const labelUser      = document.getElementById('labelUser');
 
   // Dashboard
   const btnCheckLocation  = document.getElementById('btnCheckLocation');
@@ -62,7 +65,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const inputCheckCode= document.getElementById('inputCheckCode');
   const checkResult   = document.getElementById('checkResult');
   const btnRelocate   = document.getElementById('btnRelocate');
-  const btnHistory    = document.getElementById('btnHistory');
+  const btnHistory    = document.getElementById('btnHistory');  // <— musi być w HTML!
 
   // Zmień lokalizację
   const btnFetchForChange = document.getElementById('btnFetchForChange');
@@ -75,198 +78,188 @@ document.addEventListener('DOMContentLoaded', () => {
   const currentLoc        = document.getElementById('currentLoc');
 
   // --- OBSŁUGA USTAWIEŃ ---
-  btnSettings.addEventListener('click', () => showView('view-settings'));
-  btnBackFromSettings.addEventListener('click', () => showView('view-home'));
-  btnUnlock.addEventListener('click', () => {
-    if (settingsPassword.value === ADMIN_PASS) {
-      settingsPassword.value = '';
-      settingsForm.classList.remove('hidden');
-      btnUnlock.disabled = true;
-    } else {
-      alert('Błędne hasło');
-    }
-  });
-  btnSaveSettings.addEventListener('click', () => {
-    localStorage.deviceId = inputDeviceId.value;
-    localStorage.token1   = inputToken1.value;
-    localStorage.token2   = inputToken2.value;
-    showView('view-home');
-  });
+  if (btnSettings && btnBackFromSettings && btnUnlock && btnSaveSettings) {
+    btnSettings.addEventListener('click', () => showView('view-settings'));
+    btnBackFromSettings.addEventListener('click', () => showView('view-home'));
+    btnUnlock.addEventListener('click', () => {
+      if (settingsPassword.value === ADMIN_PASS) {
+        settingsPassword.value = '';
+        settingsForm.classList.remove('hidden');
+        btnUnlock.disabled = true;
+      } else alert('Błędne hasło');
+    });
+    btnSaveSettings.addEventListener('click', () => {
+      localStorage.deviceId = inputDeviceId.value;
+      localStorage.token1   = inputToken1.value;
+      localStorage.token2   = inputToken2.value;
+      showView('view-home');
+    });
+  }
 
   // --- WYBÓR UŻYTKOWNIKA ---
-  btnSelectUser.addEventListener('click', async () => {
-    showView('view-user');
-    const res = await jsonpCall({
-      action:   'getUsers',
-      deviceId: localStorage.deviceId,
-      token1:   localStorage.token1,
-      token2:   localStorage.token2
-    });
-    if (!res.success) {
-      alert(res.error);
-      return;
-    }
-    listUsers.innerHTML = '';
-    res.users.forEach(u => {
-      const li = document.createElement('li');
-      li.textContent = u;
-      li.addEventListener('click', async () => {
-        const setRes = await jsonpCall({
-          action:   'setActiveUser',
-          deviceId: localStorage.deviceId,
-          token1:   localStorage.token1,
-          token2:   localStorage.token2,
-          user:     u
-        });
-        if (!setRes.success) {
-          alert(setRes.error);
-          return;
-        }
-        localStorage.currentUser = u;
-        labelUser.textContent    = u;
-        showView('view-dashboard');
+  if (btnSelectUser && btnBackFromUser) {
+    btnSelectUser.addEventListener('click', async () => {
+      showView('view-user');
+      const res = await jsonpCall({
+        action:   'getUsers',
+        deviceId: localStorage.deviceId,
+        token1:   localStorage.token1,
+        token2:   localStorage.token2
       });
-      listUsers.appendChild(li);
+      if (!res.success) return alert(res.error);
+      listUsers.innerHTML = '';
+      res.users.forEach(u => {
+        const li = document.createElement('li');
+        li.textContent = u;
+        li.addEventListener('click', async () => {
+          const setRes = await jsonpCall({
+            action:   'setActiveUser',
+            deviceId: localStorage.deviceId,
+            token1:   localStorage.token1,
+            token2:   localStorage.token2,
+            user:     u
+          });
+          if (!setRes.success) return alert(setRes.error);
+          localStorage.currentUser = u;
+          labelUser.textContent    = u;
+          showView('view-dashboard');
+        });
+        listUsers.appendChild(li);
+      });
     });
-  });
-  btnBackFromUser.addEventListener('click', () => showView('view-home'));
+    btnBackFromUser.addEventListener('click', () => showView('view-home'));
+  }
 
   // --- DASHBOARD ---
-  btnCheckLocation.addEventListener('click', () => showView('view-check'));
-  btnChangeLocation.addEventListener('click', () => {
-    showView('view-change');
-    // reset
-    inputChangeCode.parentElement.classList.remove('hidden');
-    btnFetchForChange.classList.remove('hidden');
-    changePrompt.classList.add('hidden');
-    changeScanNew.classList.add('hidden');
-    inputChangeCode.value = '';
-    inputChangeCode.focus();
-  });
-  btnSwitchUser.addEventListener('click', () => showView('view-user'));
-
-  // --- SPRAWDŹ LOKACJĘ + HISTORIA ---
-  document.querySelector('#view-check .btnBack')
-    .addEventListener('click', () => showView('view-dashboard'));
-
-  btnCheckCode.addEventListener('click', async () => {
-    const res = await jsonpCall({
-      action:   'checkLocation',
-      deviceId: localStorage.deviceId,
-      token1:   localStorage.token1,
-      token2:   localStorage.token2,
-      code:     inputCheckCode.value
+  if (btnCheckLocation && btnChangeLocation && btnSwitchUser) {
+    btnCheckLocation.addEventListener('click', () => showView('view-check'));
+    btnChangeLocation.addEventListener('click', () => {
+      showView('view-change');
+      // reset view-change
+      inputChangeCode.parentElement.classList.remove('hidden');
+      btnFetchForChange.classList.remove('hidden');
+      changePrompt.classList.add('hidden');
+      changeScanNew.classList.add('hidden');
+      inputChangeCode.value = '';
+      inputChangeCode.focus();
     });
-    if (!res.success) {
-      alert(res.error);
-      return;
+    btnSwitchUser.addEventListener('click', () => showView('view-user'));
+  }
+
+  // --- SPRAWDŹ LOKACJĘ i HISTORIA ---
+  const btnBackCheck = document.querySelector('#view-check .btnBack');
+  if (btnBackCheck) btnBackCheck.addEventListener('click', () => showView('view-dashboard'));
+
+  if (btnCheckCode && btnRelocate) {
+    btnCheckCode.addEventListener('click', async () => {
+      const res = await jsonpCall({
+        action:   'checkLocation',
+        deviceId: localStorage.deviceId,
+        token1:   localStorage.token1,
+        token2:   localStorage.token2,
+        code:     inputCheckCode.value
+      });
+      if (!res.success) return alert(res.error);
+      if (res.found) {
+        currentCode   = res.code;
+        currentSymbol = res.symbol;
+        lastHistory   = res.history || [];
+        checkResult.textContent =
+          `Kod: ${res.code} | Symbol: ${res.symbol} | Lokalizacja: ${res.location}`;
+        btnRelocate.classList.remove('hidden');
+        if (btnHistory) btnHistory.classList.remove('hidden');
+      } else {
+        checkResult.textContent = 'Brak produktu w bazie';
+        btnRelocate.classList.add('hidden');
+        if (btnHistory) btnHistory.classList.add('hidden');
+      }
+    });
+
+    // Historia lokacji
+    if (btnHistory) {
+      btnHistory.addEventListener('click', () => {
+        if (!lastHistory.length) {
+          alert('Brak poprzednich zmian lokalizacji.');
+          return;
+        }
+        const lines = lastHistory.map(h =>
+          `${new Date(h.date).toLocaleString()}: ${h.oldLocation} → ${h.newLocation} (użytkownik: ${h.user})`
+        );
+        alert('Ostatnie zmiany:\n\n' + lines.join('\n'));
+      });
     }
-    if (res.found) {
+  }
+
+  // --- NATYCHMIASTOWA ZMIANA LOKALIZACJI ---
+  if (btnRelocate) {
+    btnRelocate.addEventListener('click', () => {
+      showView('view-change');
+      inputChangeCode.parentElement.classList.add('hidden');
+      btnFetchForChange.classList.add('hidden');
+      changePrompt.classList.add('hidden');
+      changeScanNew.classList.remove('hidden');
+      currentLoc.textContent = `Aktualna lokalizacja: ${checkResult.textContent.split(' | Lokalizacja: ')[1]}`;
+      let infoEl = document.getElementById('productInfo');
+      if (!infoEl) {
+        infoEl = document.createElement('p');
+        infoEl.id = 'productInfo';
+        document.getElementById('view-change').insertBefore(infoEl, changeScanNew);
+      }
+      infoEl.textContent = `Kod produktu: ${currentCode} | Symbol: ${currentSymbol}`;
+      inputNewLocation.value = '';
+      inputNewLocation.focus();
+    });
+  }
+
+  // --- PEŁNY FLOW ZMIANY LOKALIZACJI ---
+  const btnBackChange = document.querySelector('#view-change .btnBack');
+  if (btnBackChange) btnBackChange.addEventListener('click', () => showView('view-dashboard'));
+
+  if (btnFetchForChange) {
+    btnFetchForChange.addEventListener('click', async () => {
+      const res = await jsonpCall({
+        action:   'checkLocation',
+        deviceId: localStorage.deviceId,
+        token1:   localStorage.token1,
+        token2:   localStorage.token2,
+        code:     inputChangeCode.value
+      });
+      if (!res.success) return alert(res.error);
+      if (!res.found) return alert('Kod nie istnieje');
       currentCode   = res.code;
       currentSymbol = res.symbol;
       lastHistory   = res.history || [];
-      checkResult.textContent = 
-        `Kod: ${res.code} | Symbol: ${res.symbol} | Lokalizacja: ${res.location}`;
-      btnRelocate.classList.remove('hidden');
-      btnHistory.classList.remove('hidden');
-    } else {
-      checkResult.textContent = 'Brak produktu w bazie';
-      btnRelocate.classList.add('hidden');
-      btnHistory.classList.add('hidden');
-    }
-  });
-
-  // Historia lokacji
-  btnHistory.addEventListener('click', () => {
-    if (!lastHistory.length) {
-      alert('Brak poprzednich zmian lokalizacji.');
-      return;
-    }
-    // Budujemy tekst
-    const lines = lastHistory.map(h => 
-      `${h.date.toLocaleString()}: ${h.oldLocation} → ${h.newLocation} (użytkownik: ${h.user})`
-    );
-    alert('Ostatnie zmiany:\n\n' + lines.join('\n'));
-  });
-
-  // --- NATYCHMIASTOWA ZMIANA LOKALIZACJI ---
-  btnRelocate.addEventListener('click', () => {
-    showView('view-change');
-    inputChangeCode.parentElement.classList.add('hidden');
-    btnFetchForChange.classList.add('hidden');
-    changePrompt.classList.add('hidden');
-    changeScanNew.classList.remove('hidden');
-    currentLoc.textContent = 
-      `Aktualna lokalizacja: ${checkResult.textContent.split(' | Lokalizacja: ')[1]}`;
-    let infoEl = document.getElementById('productInfo');
-    if (!infoEl) {
-      infoEl = document.createElement('p');
-      infoEl.id = 'productInfo';
-      document.getElementById('view-change')
-              .insertBefore(infoEl, changeScanNew);
-    }
-    infoEl.textContent = `Kod produktu: ${currentCode} | Symbol: ${currentSymbol}`;
-    inputNewLocation.value = '';
-    inputNewLocation.focus();
-  });
-
-  // --- PEŁNY FLOW ZMIANY LOKALIZACJI ---
-  document.querySelector('#view-change .btnBack')
-    .addEventListener('click', () => showView('view-dashboard'));
-
-  btnFetchForChange.addEventListener('click', async () => {
-    const res = await jsonpCall({
-      action:   'checkLocation',
-      deviceId: localStorage.deviceId,
-      token1:   localStorage.token1,
-      token2:   localStorage.token2,
-      code:     inputChangeCode.value
+      currentLoc.textContent = `Aktualna lokalizacja: ${res.location}`;
+      changePrompt.classList.remove('hidden');
     });
-    if (!res.success) {
-      alert(res.error);
-      return;
-    }
-    if (!res.found) {
-      alert('Kod nie istnieje');
-      return;
-    }
-    currentCode   = res.code;
-    currentSymbol = res.symbol;
-    lastHistory   = res.history || [];
-    currentLoc.textContent = `Aktualna lokalizacja: ${res.location}`;
-    changePrompt.classList.remove('hidden');
-  });
-
-  btnConfirmChange.addEventListener('click', () => {
-    changePrompt.classList.add('hidden');
-    changeScanNew.classList.remove('hidden');
-    inputNewLocation.focus();
-  });
-
-  btnSubmitChange.addEventListener('click', async () => {
-    const newLoc = inputNewLocation.value;
-    if (!currentCode || !newLoc) {
-      alert('Brak kodu lub lokalizacji!');
-      return;
-    }
-    const res = await jsonpCall({
-      action:      'setLocation',
-      deviceId:    localStorage.deviceId,
-      token1:      localStorage.token1,
-      token2:      localStorage.token2,
-      code:        currentCode,
-      newLocation: newLoc
+  }
+  if (btnConfirmChange) {
+    btnConfirmChange.addEventListener('click', () => {
+      changePrompt.classList.add('hidden');
+      changeScanNew.classList.remove('hidden');
+      inputNewLocation.focus();
     });
-    if (!res.success) {
-      alert(res.error);
-      return;
-    }
-    alert('Zaktualizowano lokalizację');
-    const infoEl = document.getElementById('productInfo');
-    if (infoEl) infoEl.remove();
-    showView('view-dashboard');
-  });
+  }
+  if (btnSubmitChange) {
+    btnSubmitChange.addEventListener('click', async () => {
+      const newLoc = inputNewLocation.value;
+      if (!currentCode || !newLoc) return alert('Brak kodu lub lokalizacji!');
+      const res = await jsonpCall({
+        action:      'setLocation',
+        deviceId:    localStorage.deviceId,
+        token1:      localStorage.token1,
+        token2:      localStorage.token2,
+        code:        currentCode,
+        newLocation: newLoc
+      });
+      if (!res.success) return alert(res.error);
+      alert('Zaktualizowano lokalizację');
+      const infoEl = document.getElementById('productInfo');
+      if (infoEl) infoEl.remove();
+      showView('view-dashboard');
+    });
+  }
 
-  // Startujemy od ekranu głównego
+  // Start
   showView('view-home');
 });
